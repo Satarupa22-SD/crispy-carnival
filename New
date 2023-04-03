@@ -1,0 +1,102 @@
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include "calc.tab.h"
+%}
+
+%token NUMBER
+
+%left '+' '-'
+%left '*' '/'
+
+%%
+
+expression:
+    NUMBER          { printf("%f ", $1); }
+  | expression '+' expression  { printf("+ "); $$ = $1 + $3; }
+  | expression '-' expression  { printf("- "); $$ = $1 - $3; }
+  | expression '*' expression  { printf("* "); $$ = $1 * $3; }
+  | expression '/' expression  { printf("/ "); $$ = $1 / $3; }
+  | '(' expression ')'        { $$ = $2; }
+  ;
+
+%%
+
+double evaluate_postfix(char *postfix_expression) {
+    int i, top = -1;
+    double stack[MAX_EXPRESSION_LENGTH];
+    char c;
+    double operand1, operand2;
+
+    for (i = 0; postfix_expression[i] != '\0'; i++) {
+        c = postfix_expression[i];
+        if (isdigit(c)) {
+            top++;
+            stack[top] = atof(&postfix_expression[i]);
+            while (isdigit(postfix_expression[i]) || postfix_expression[i] == '.') {
+                i++;
+            }
+            i--;
+        }
+        else if (is_operator(c)) {
+            operand2 = stack[top];
+            top--;
+            operand1 = stack[top];
+            top--;
+            switch (c) {
+                case '+':
+                    top++;
+                    stack[top] = operand1 + operand2;
+                    break;
+                case '-':
+                    top++;
+                    stack[top] = operand1 - operand2;
+                    break;
+                case '*':
+                    top++;
+                    stack[top] = operand1 * operand2;
+                    break;
+                case '/':
+                    top++;
+                    stack[top] = operand1 / operand2;
+                    break;
+            }
+        }
+    }
+
+    return stack[top];
+}
+
+int main() {
+    char infix_expression[MAX_EXPRESSION_LENGTH];
+    char postfix_expression[MAX_EXPRESSION_LENGTH];
+    double result;
+
+    printf("Enter an expression in infix notation: ");
+    fgets(infix_expression, MAX_EXPRESSION_LENGTH, stdin);
+    infix_expression[strcspn(infix_expression, "\n")] = '\0';
+
+    yyscan_t scanner;
+    YY_BUFFER_STATE state;
+    yylex_init(&scanner);
+    state = yy_scan_string(infix_expression, scanner);
+
+    printf("The expression in postfix notation is: ");
+    yyparse();
+    strcpy(postfix_expression, yystack_to_string());
+    printf("\n");
+
+    result = evaluate_postfix(postfix_expression);
+    printf("The result of the expression is: %f\n", result);
+
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    return 0;
+}
+
+void yyerror(char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
