@@ -1,0 +1,49 @@
+file.l
+%{
+#include"hello2.tab.h"
+extern int yylval;
+%}
+%%
+[aA] {return A;}
+[bB] {return B;}
+[c] {return C;}
+\n {return NL;}
+.  {return yytext[0];}
+%%
+
+int yywrap(){
+    return 1;
+}
+
+file.y
+%{
+   /* Definition section */
+   #include<stdio.h>
+   #include<stdlib.h>
+%}
+  
+%token A B C NL
+  
+/* Rule Section */
+%%
+stmt: S NL  { printf("valid string\n");
+              exit(0); }
+;
+S: A S B 
+| B S A
+| C
+;
+%%
+  
+int yyerror(char *msg)
+ {
+  printf("invalid string\n");
+  exit(0);
+ }
+  
+//driver code 
+main()
+ {
+  printf("enter the string\n");
+  yyparse();
+ }
